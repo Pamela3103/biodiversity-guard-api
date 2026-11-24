@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from sqlalchemy import create_engine, text
 from typing import Optional
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(
     title="BIODIVERSITY-GUARD-Predict API",
@@ -10,17 +14,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Habilitar CORS para permitir peticiones desde el futuro Dashboard (Streamlit / React / etc.)
+# CORS: configurar los orígenes permitidos mediante CORS_ORIGINS.
+# Por defecto se permite cualquier origen, sin envío de credenciales.
+origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=origins,
+    allow_credentials=False,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
-# Conexión mediante Transaction Pooler de Supabase
-DATABASE_URL = "postgresql+psycopg2://postgres.sarhtkerllftwlzqkovr:biodiversity_guard_123@aws-1-us-east-1.pooler.supabase.com:6543/postgres"
+# La URL de conexión se configura en el entorno (Render o archivo .env local).
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "Falta configurar DATABASE_URL en las variables de entorno."
+    )
+
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
